@@ -288,8 +288,15 @@ body{font-family:'Nunito','Fredoka One',sans-serif;}
     <h2>Game Over!</h2>
     <p id="goScore"></p>
     <p id="goLevel"></p>
-    <button class="modal-btn" onclick="startGame()">Try Again</button>
-    <button class="modal-btn secondary" onclick="returnToMenu()">Menu</button>
+    <div style="margin:1rem 0;">
+      <label style="font-size:clamp(0.85rem,2.5vw,1.1rem);color:#dda0dd;">Enter your name for the Hall of Fame:</label>
+      <input type="text" id="goNameInput" maxlength="12" placeholder="AAA"
+        onkeydown="if(event.key==='Enter'){event.preventDefault();submitScore();}"
+        style="display:block;margin:0.5rem auto;width:min(200px,60%);padding:0.5rem 0.8rem;font-family:'Fredoka One',sans-serif;font-size:1.2rem;text-align:center;border-radius:12px;border:3px solid #FFD700;background:rgba(255,255,255,0.15);color:#FFD700;text-transform:uppercase;letter-spacing:3px;"
+      />
+    </div>
+    <button class="modal-btn" onclick="submitScore()">Save Score</button>
+    <button class="modal-btn secondary" onclick="skipScore()">Skip</button>
   </div>
 </div>
 
@@ -1330,16 +1337,33 @@ function gameOver() {
   if (gobblersInterval) clearInterval(gobblersInterval);
   stopBgMusic();
 
-  // Save to hall of fame
-  hallOfFame.push({ score: state.score, level: state.level, grade: state.grade, category: state.category });
-  hallOfFame.sort((a, b) => b.score - a.score);
-  hallOfFame = hallOfFame.slice(0, 10);
-
   setTimeout(() => {
     document.getElementById('goScore').textContent = `Final Score: ${state.score}`;
     document.getElementById('goLevel').textContent = `Reached Level ${state.level}`;
+    const nameInput = document.getElementById('goNameInput');
+    nameInput.value = '';
     document.getElementById('gameOverModal').classList.add('active');
+    // Focus the input after modal appears
+    setTimeout(() => nameInput.focus(), 100);
   }, 500);
+}
+
+function submitScore() {
+  const nameInput = document.getElementById('goNameInput');
+  const name = nameInput.value.trim().toUpperCase() || '???';
+  hallOfFame.push({ name, score: state.score, level: state.level, grade: state.grade, category: state.category });
+  hallOfFame.sort((a, b) => b.score - a.score);
+  hallOfFame = hallOfFame.slice(0, 10);
+  closeAllModals();
+  showHallOfFame();
+}
+
+function skipScore() {
+  hallOfFame.push({ name: '???', score: state.score, level: state.level, grade: state.grade, category: state.category });
+  hallOfFame.sort((a, b) => b.score - a.score);
+  hallOfFame = hallOfFame.slice(0, 10);
+  closeAllModals();
+  returnToMenu();
 }
 
 function returnToMenu() {
@@ -1853,7 +1877,7 @@ function showHallOfFame() {
     list.innerHTML = '<li style="color:#888;">No scores yet! Play a game first.</li>';
   } else {
     list.innerHTML = hallOfFame.map((h, i) =>
-      `<li><span class="hof-rank">${i + 1}.</span> ${h.score} pts — Level ${h.level} (Grade ${h.grade}, ${h.category})</li>`
+      `<li><span class="hof-rank">${i + 1}.</span> <strong>${h.name || '???'}</strong> — ${h.score} pts — Level ${h.level} (Grade ${h.grade}, ${h.category})</li>`
     ).join('');
   }
   document.getElementById('hofModal').classList.add('active');
