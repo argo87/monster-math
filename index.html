@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Monster Math!</title>
+<style>
+/* ========== RESET & BASE ========== */
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Fredoka One',sans-serif;background:#1a0a2e;color:#fff;touch-action:none;user-select:none;-webkit-user-select:none;}
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;900&display=swap');
+body{font-family:'Nunito','Fredoka One',sans-serif;}
+
+/* ========== SCREENS ========== */
+.screen{display:none;position:absolute;top:0;left:0;width:100%;height:100%;flex-direction:column;align-items:center;justify-content:center;}
+.screen.active{display:flex;}
+
+/* ========== MENU SCREEN ========== */
+#menuScreen{background:linear-gradient(135deg,#1a0a2e 0%,#2d1b69 30%,#11998e 100%);overflow:hidden;}
+#menuScreen::before{content:'';position:absolute;top:0;left:0;width:100%;height:100%;background:radial-gradient(circle at 20% 80%,rgba(255,107,107,0.15) 0%,transparent 50%),radial-gradient(circle at 80% 20%,rgba(78,205,196,0.15) 0%,transparent 50%);pointer-events:none;}
+.menu-title{font-family:'Fredoka One',sans-serif;font-size:clamp(2.5rem,8vw,5rem);text-align:center;background:linear-gradient(180deg,#FFD700 0%,#FF8C00 50%,#FF4500 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(3px 3px 0 rgba(0,0,0,0.3));animation:titleBounce 2s ease-in-out infinite;margin-bottom:0.5rem;z-index:1;}
+@keyframes titleBounce{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-10px) scale(1.02);}}
+.menu-subtitle{font-size:clamp(0.9rem,2.5vw,1.3rem);color:#a8e6cf;margin-bottom:1.5rem;z-index:1;}
+.chomper-preview{width:120px;height:120px;margin:0.5rem auto;z-index:1;}
+.menu-options{display:flex;flex-direction:column;gap:0.8rem;z-index:1;width:min(90%,400px);}
+.menu-row{display:flex;align-items:center;gap:0.8rem;justify-content:center;}
+.menu-row label{font-size:clamp(0.85rem,2vw,1.1rem);min-width:100px;text-align:right;color:#dda0dd;}
+.menu-row select,.menu-row button{font-family:'Nunito',sans-serif;font-weight:700;font-size:clamp(0.8rem,2vw,1rem);padding:0.5rem 1rem;border-radius:12px;border:3px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.15);color:#fff;cursor:pointer;backdrop-filter:blur(5px);}
+.menu-row select option{background:#2d1b69;color:#fff;}
+.toggle-btn{min-width:70px;transition:all 0.3s;}
+.toggle-btn.on{background:rgba(78,205,196,0.4);border-color:#4ecdc4;}
+.toggle-btn.off{background:rgba(255,107,107,0.3);border-color:#ff6b6b;}
+.play-btn{font-family:'Fredoka One',sans-serif;font-size:clamp(1.3rem,4vw,2rem);padding:0.8rem 3rem;border-radius:20px;border:4px solid #FFD700;background:linear-gradient(180deg,#ff6b6b,#ee5a24);color:#fff;cursor:pointer;margin-top:1rem;transition:transform 0.2s;z-index:1;text-shadow:2px 2px 0 rgba(0,0,0,0.3);box-shadow:0 6px 0 #c0392b,0 8px 15px rgba(0,0,0,0.3);}
+.play-btn:hover,.play-btn:active{transform:translateY(3px);box-shadow:0 3px 0 #c0392b,0 5px 10px rgba(0,0,0,0.3);}
+.hall-btn{font-family:'Nunito',sans-serif;font-weight:700;font-size:0.9rem;padding:0.5rem 1.5rem;border-radius:12px;border:2px solid #FFD700;background:rgba(255,215,0,0.15);color:#FFD700;cursor:pointer;margin-top:0.5rem;z-index:1;}
+
+/* ========== HUD ========== */
+#gameScreen{background:linear-gradient(180deg,#1a0a2e 0%,#16213e 50%,#0f3460 100%);flex-direction:column;}
+.hud{display:flex;justify-content:space-between;align-items:center;width:100%;padding:0.5rem 1rem;z-index:10;flex-shrink:0;}
+.hud-left,.hud-right{display:flex;align-items:center;gap:0.8rem;}
+.hud-score{font-family:'Fredoka One',sans-serif;font-size:clamp(1rem,3vw,1.5rem);color:#FFD700;}
+.hud-level{font-size:clamp(0.7rem,2vw,0.9rem);color:#a8e6cf;}
+.hud-lives{display:flex;gap:4px;}
+.hud-heart{width:clamp(20px,4vw,30px);height:clamp(20px,4vw,30px);transition:all 0.3s;}
+.hud-heart.lost{opacity:0.2;transform:scale(0.7);}
+.hud-menu-btn{font-family:'Nunito',sans-serif;font-weight:700;padding:0.3rem 0.8rem;border-radius:8px;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;font-size:0.8rem;}
+
+/* ========== PROMPT ========== */
+.prompt-bar{width:100%;text-align:center;padding:0.5rem;flex-shrink:0;z-index:10;}
+.prompt-text{font-family:'Fredoka One',sans-serif;font-size:clamp(1rem,3.5vw,1.6rem);color:#fff;background:linear-gradient(90deg,rgba(255,107,107,0.3),rgba(78,205,196,0.3));padding:0.4rem 1.5rem;border-radius:15px;display:inline-block;border:2px solid rgba(255,255,255,0.2);}
+
+/* ========== GRID AREA ========== */
+.grid-container{flex:1;display:flex;align-items:center;justify-content:center;perspective:800px;z-index:5;position:relative;overflow:hidden;width:100%;}
+.grid-wrapper{transform:rotateX(25deg) rotateZ(-2deg);transform-style:preserve-3d;transition:transform 0.3s;position:relative;z-index:10;}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(4px,1vw,8px);padding:clamp(4px,1vw,8px);}
+.cell{width:clamp(52px,14vw,90px);height:clamp(52px,14vw,90px);border-radius:12px;display:flex;align-items:center;justify-content:center;font-family:'Fredoka One',sans-serif;font-size:clamp(0.8rem,2.5vw,1.3rem);cursor:pointer;position:relative;transition:all 0.2s;transform-style:preserve-3d;color:#1a0a2e;}
+/* Orb: a round bubble sitting on top of the grid tile */
+.cell-content{position:relative;z-index:2;text-align:center;line-height:1.1;pointer-events:none;display:flex;align-items:center;justify-content:center;width:82%;height:82%;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,0.95),rgba(255,255,255,0.7) 50%,rgba(220,220,240,0.85));box-shadow:0 4px 8px rgba(0,0,0,0.2),inset 0 -3px 6px rgba(0,0,0,0.08),inset 0 2px 4px rgba(255,255,255,0.9);transition:transform 0.2s,opacity 0.2s;}
+/* 3D tile shadow */
+.cell::before{content:'';position:absolute;bottom:-6px;left:3px;right:-3px;top:3px;border-radius:12px;z-index:0;}
+.cell.color-0{background:linear-gradient(135deg,#ff9a9e,#fecfef);}.cell.color-0::before{background:#d4757a;}
+.cell.color-1{background:linear-gradient(135deg,#a8e6cf,#dcedc1);}.cell.color-1::before{background:#7ab89a;}
+.cell.color-2{background:linear-gradient(135deg,#ffd3a5,#fd9853);}.cell.color-2::before{background:#c47a3f;}
+.cell.color-3{background:linear-gradient(135deg,#c3cfe2,#a1c4fd);}.cell.color-3::before{background:#7a96bf;}
+.cell.color-4{background:linear-gradient(135deg,#fdcbf1,#e6dee9);}.cell.color-4::before{background:#b89abd;}
+.cell.color-5{background:linear-gradient(135deg,#f5f7fa,#c3cfe2);}.cell.color-5::before{background:#949eb3;}
+/* When eaten, only the orb pops — the tile stays */
+.cell-content.eaten{animation:orbPop 0.4s ease-out forwards;}
+.cell-content.wrong-eat{animation:orbShake 0.4s ease-out;}
+@keyframes orbPop{0%{transform:scale(1);opacity:1;}40%{transform:scale(1.3);opacity:0.6;}100%{transform:scale(0);opacity:0;}}
+@keyframes orbShake{0%,100%{transform:translateX(0);}20%{transform:translateX(-6px);}40%{transform:translateX(6px);}60%{transform:translateX(-4px);}80%{transform:translateX(4px);}}
+
+/* Safe Zone */
+.cell.safe-zone{box-shadow:0 0 15px 5px rgba(255,215,0,0.6);border:3px solid #FFD700;animation:safeGlow 1s ease-in-out infinite alternate;}
+@keyframes safeGlow{from{box-shadow:0 0 10px 3px rgba(255,215,0,0.4);}to{box-shadow:0 0 20px 8px rgba(255,215,0,0.8);}}
+
+/* Cookie */
+.cookie-icon{font-size:clamp(1.5rem,4vw,2rem);animation:cookieBob 0.8s ease-in-out infinite alternate;}
+@keyframes cookieBob{from{transform:translateY(-3px) rotate(-5deg);}to{transform:translateY(3px) rotate(5deg);}}
+
+/* ========== CHOMPER ========== */
+.chomper-on-grid{position:absolute;z-index:20;pointer-events:none;transition:left 0.15s ease-out, top 0.15s ease-out;}
+.chomper-svg{width:clamp(48px,13vw,85px);height:clamp(48px,13vw,85px);}
+.chomper-on-grid.munching .chomper-mouth{animation:munchAnim 0.3s ease-in-out;}
+.chomper-on-grid.wrong .chomper-body-main{fill:#ff4444 !important;animation:wrongShake 0.4s ease-in-out;}
+.chomper-on-grid.invincible{filter:drop-shadow(0 0 10px gold) drop-shadow(0 0 20px gold);animation:invinciblePulse 0.5s ease-in-out infinite alternate;}
+@keyframes munchAnim{0%,100%{transform:scaleY(1);}50%{transform:scaleY(0.3);}}
+@keyframes wrongShake{0%,100%{transform:translateX(0) rotate(0);}25%{transform:translateX(-5px) rotate(-10deg);}75%{transform:translateX(5px) rotate(10deg);}}
+@keyframes invinciblePulse{from{filter:drop-shadow(0 0 8px gold);}to{filter:drop-shadow(0 0 20px gold) drop-shadow(0 0 30px orange);}}
+
+/* Chomper idle */
+.chomper-on-grid.idle .chomper-body-main{animation:idleBounce 1.5s ease-in-out infinite;}
+@keyframes idleBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
+
+/* ========== GOBBLERS ========== */
+.gobbler-on-grid{position:absolute;z-index:15;pointer-events:none;transition:left 0.3s ease-in-out, top 0.3s ease-in-out, opacity 0.3s;}
+.gobbler-svg{width:clamp(40px,11vw,70px);height:clamp(40px,11vw,70px);}
+.gobbler-on-grid.wanderer .gobbler-svg{animation:gobblerWobble 0.8s ease-in-out infinite;}
+.gobbler-on-grid.shyguy .gobbler-svg{animation:gobblerShiver 0.3s ease-in-out infinite;}
+.gobbler-on-grid.hunter .gobbler-svg{animation:gobblerPulse 0.6s ease-in-out infinite;}
+@keyframes gobblerWobble{0%,100%{transform:rotate(-5deg);}50%{transform:rotate(5deg);}}
+@keyframes gobblerShiver{0%,100%{transform:translateX(0);}50%{transform:translateX(2px);}}
+@keyframes gobblerPulse{0%,100%{transform:scale(1);}50%{transform:scale(1.08);}}
+/* Hiding states — gobbler slides under the grid tiles */
+.gobbler-on-grid.hiding{z-index:4;transition:left 0.5s ease-in, top 0.5s ease-in, transform 0.5s ease-in, opacity 0.3s;}
+.gobbler-on-grid.hidden{opacity:0;pointer-events:none;z-index:4;}
+.gobbler-on-grid.peeking{z-index:4;transition:left 0.4s ease-out, top 0.4s ease-out, transform 0.4s ease-out, opacity 0.3s;}
+
+/* ========== TOUCH CONTROLS ========== */
+.touch-controls{display:none;z-index:20;flex-shrink:0;padding:0.5rem;gap:0;justify-content:center;align-items:center;}
+.touch-row{display:flex;gap:clamp(4px,1.5vw,8px);justify-content:center;}
+.touch-btn{width:clamp(50px,14vw,70px);height:clamp(50px,14vw,70px);border-radius:16px;border:3px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-size:clamp(1.2rem,4vw,1.8rem);display:flex;align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);transition:all 0.1s;}
+.touch-btn:active{background:rgba(255,255,255,0.3);transform:scale(0.92);}
+.touch-btn.munch-btn{background:rgba(78,205,196,0.3);border-color:#4ecdc4;font-family:'Fredoka One',sans-serif;font-size:clamp(0.6rem,2vw,0.8rem);width:clamp(50px,14vw,70px);}
+.touch-spacer{width:clamp(50px,14vw,70px);height:clamp(50px,14vw,70px);}
+@media (pointer:coarse),(max-width:768px){.touch-controls{display:flex;flex-direction:column;gap:clamp(2px,0.5vw,4px);}}
+
+/* ========== MODALS ========== */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(5px);}
+.modal-overlay.active{display:flex;}
+.modal{background:linear-gradient(135deg,#2d1b69,#1a0a2e);border:3px solid rgba(255,215,0,0.5);border-radius:20px;padding:clamp(1rem,3vw,2rem);text-align:center;max-width:min(90vw,450px);max-height:90vh;overflow-y:auto;box-shadow:0 0 30px rgba(255,215,0,0.2);}
+.modal h2{font-family:'Fredoka One',sans-serif;font-size:clamp(1.3rem,4vw,2rem);margin-bottom:1rem;background:linear-gradient(180deg,#FFD700,#FF8C00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.modal p{font-size:clamp(0.85rem,2.5vw,1.1rem);margin-bottom:0.5rem;color:#dda0dd;}
+.modal-btn{font-family:'Fredoka One',sans-serif;font-size:clamp(1rem,3vw,1.3rem);padding:0.6rem 2rem;border-radius:15px;border:3px solid #FFD700;background:linear-gradient(180deg,#4ecdc4,#44a08d);color:#fff;cursor:pointer;margin:0.5rem;text-shadow:1px 1px 0 rgba(0,0,0,0.2);}
+.modal-btn.secondary{background:linear-gradient(180deg,#a8a8a8,#666);border-color:#999;}
+
+/* ========== CUTSCENE ========== */
+#cutsceneScreen{background:#1a0a2e;z-index:50;}
+.cutscene-stage{width:min(90vw,500px);height:min(60vh,350px);position:relative;overflow:hidden;border-radius:20px;background:linear-gradient(180deg,#87CEEB,#228B22 70%,#1a5c1a);border:4px solid #FFD700;}
+.cutscene-text{font-family:'Fredoka One',sans-serif;font-size:clamp(1rem,3vw,1.5rem);color:#FFD700;text-align:center;margin-top:1rem;text-shadow:2px 2px 0 rgba(0,0,0,0.5);}
+.cutscene-skip{margin-top:1rem;font-family:'Nunito',sans-serif;font-weight:700;padding:0.5rem 1.5rem;border-radius:10px;border:2px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.1);color:#fff;cursor:pointer;}
+
+/* ========== HALL OF FAME ========== */
+.hof-list{list-style:none;margin:1rem 0;}
+.hof-list li{padding:0.4rem;font-size:1rem;color:#a8e6cf;border-bottom:1px solid rgba(255,255,255,0.1);}
+.hof-list li:nth-child(-n+3){color:#FFD700;font-weight:900;}
+.hof-list .hof-rank{display:inline-block;width:30px;}
+
+/* ========== SHAPES in cells ========== */
+.shape-svg{width:clamp(28px,7vw,45px);height:clamp(28px,7vw,45px);}
+
+/* ========== FRACTION DISPLAY ========== */
+.frac{display:inline-flex;flex-direction:column;align-items:center;line-height:1;font-size:clamp(0.65rem,2vw,1rem);}
+.frac-num,.frac-den{display:block;}
+.frac-bar{width:100%;height:2px;background:#1a0a2e;margin:1px 0;}
+
+/* ========== ANIMATIONS ========== */
+.victory-chomper{animation:victoryDance 0.5s ease-in-out infinite alternate;}
+@keyframes victoryDance{0%{transform:translateY(0) rotate(-5deg) scale(1);}100%{transform:translateY(-15px) rotate(5deg) scale(1.1);}}
+.floating-points{position:absolute;z-index:30;font-family:'Fredoka One',sans-serif;font-size:1.2rem;pointer-events:none;animation:floatUp 1s ease-out forwards;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-40px) scale(1.3);}}
+
+/* Stars bg */
+.stars{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:hidden;z-index:0;}
+.star{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;animation:twinkle 3s ease-in-out infinite;}
+@keyframes twinkle{0%,100%{opacity:0.2;}50%{opacity:1;}}
+</style>
+</head>
+<body>
+
+<!-- ========== MENU SCREEN ========== -->
+<div id="menuScreen" class="screen active">
+  <div class="stars" id="menuStars"></div>
+  <div class="menu-title">Monster Math!</div>
+  <div class="menu-subtitle">A Munching Math Adventure</div>
+  <div class="chomper-preview" id="menuChomper"></div>
+  <div class="menu-options">
+    <div class="menu-row">
+      <label>Grade:</label>
+      <select id="gradeSelect">
+        <option value="1" selected>Grade 1-2</option>
+        <option value="3">Grade 3-4</option>
+        <option value="5">Grade 5-6</option>
+      </select>
+    </div>
+    <div class="menu-row">
+      <label>Category:</label>
+      <select id="categorySelect">
+        <option value="whole">Whole Numbers</option>
+        <option value="fractions">Fractions</option>
+        <option value="decimals">Decimals</option>
+        <option value="geometry">Geometry</option>
+      </select>
+    </div>
+    <div class="menu-row">
+      <label>Gobblers:</label>
+      <button class="toggle-btn off" id="gobblersToggle" onclick="toggleGobblers()">OFF</button>
+    </div>
+    <div class="menu-row">
+      <label>Music:</label>
+      <button class="toggle-btn off" id="musicToggle" onclick="toggleMusic()">OFF</button>
+    </div>
+    <div class="menu-row">
+      <label>Voice:</label>
+      <button class="toggle-btn on" id="voiceToggle" onclick="toggleVoice()">ON</button>
+    </div>
+  </div>
+  <button class="play-btn" onclick="startGame()">PLAY!</button>
+  <button class="hall-btn" onclick="showHallOfFame()">Hall of Fame</button>
+</div>
+
+<!-- ========== GAME SCREEN ========== -->
+<div id="gameScreen" class="screen">
+  <div class="hud">
+    <div class="hud-left">
+      <div class="hud-score" id="hudScore">0</div>
+      <div class="hud-level" id="hudLevel">Level 1</div>
+    </div>
+    <div class="hud-right">
+      <div class="hud-lives" id="hudLives"></div>
+      <button class="hud-menu-btn" onclick="returnToMenu()">Menu</button>
+    </div>
+  </div>
+  <div class="prompt-bar">
+    <div class="prompt-text" id="promptText">Eat multiples of 3</div>
+  </div>
+  <div class="grid-container" id="gridContainer">
+    <div class="grid-wrapper">
+      <div class="grid" id="gameGrid"></div>
+    </div>
+  </div>
+  <div class="touch-controls" id="touchControls">
+    <div class="touch-row">
+      <div class="touch-spacer"></div>
+      <button class="touch-btn" ontouchstart="handleTouch('up')" onmousedown="handleTouch('up')">▲</button>
+      <div class="touch-spacer"></div>
+    </div>
+    <div class="touch-row">
+      <button class="touch-btn" ontouchstart="handleTouch('left')" onmousedown="handleTouch('left')">◀</button>
+      <button class="touch-btn munch-btn" ontouchstart="handleTouch('munch')" onmousedown="handleTouch('munch')">MUNCH</button>
+      <button class="touch-btn" ontouchstart="handleTouch('right')" onmousedown="handleTouch('right')">▶</button>
+    </div>
+    <div class="touch-row">
+      <div class="touch-spacer"></div>
+      <button class="touch-btn" ontouchstart="handleTouch('down')" onmousedown="handleTouch('down')">▼</button>
+      <div class="touch-spacer"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CUTSCENE SCREEN ========== -->
+<div id="cutsceneScreen" class="screen">
+  <div class="cutscene-stage" id="cutsceneStage"></div>
+  <div class="cutscene-text" id="cutsceneText"></div>
+  <button class="cutscene-skip" onclick="skipCutscene()">Skip →</button>
+</div>
+
+<!-- ========== MODALS ========== -->
+<div class="modal-overlay" id="levelCompleteModal">
+  <div class="modal">
+    <h2 id="lcTitle">Level Complete!</h2>
+    <p id="lcScore"></p>
+    <p id="lcBonus"></p>
+    <p id="lcTotal"></p>
+    <button class="modal-btn" onclick="nextLevel()">Next Level!</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="gameOverModal">
+  <div class="modal">
+    <h2>Game Over!</h2>
+    <p id="goScore"></p>
+    <p id="goLevel"></p>
+    <button class="modal-btn" onclick="startGame()">Try Again</button>
+    <button class="modal-btn secondary" onclick="returnToMenu()">Menu</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="hofModal">
+  <div class="modal">
+    <h2>Hall of Fame</h2>
+    <ol class="hof-list" id="hofList"></ol>
+    <button class="modal-btn secondary" onclick="closeHof()">Close</button>
+  </div>
+</div>
+
+<script>
+// =============================================
+// GAME STATE
+// =============================================
+const COLS = 5, ROWS = 4;
+let state = {
+  screen: 'menu',
+  grade: 1,
+  category: 'whole',
+  gobblersEnabled: false,
+  musicEnabled: false,
+  score: 0,
+  lives: 4,
+  level: 1,
+  subLevel: 0,
+  chomper: { col: 2, row: 1 },
+  grid: [],
+  gobblers: [],
+  prompt: {},
+  invincible: false,
+  invincibleTimer: null,
+  safeZones: [],
+  cookie: null,
+  gameActive: false,
+  levelStartTime: 0,
+  moveTimeout: false,
+  totalLevelsCompleted: 0
+};
+let hallOfFame = [];
+let audioCtx = null;
+let bgMusicInterval = null;
+let gobblersInterval = null;
+let safeZoneTimeout = null;
+let cookieTimeout = null;
+let animFrameId = null;
+
+// =============================================
+// AUDIO
+// =============================================
+function initAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTone(freq, duration, type = 'square', vol = 0.12) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function playChomp() {
+  playTone(400, 0.08, 'square', 0.15);
+  setTimeout(() => playTone(600, 0.1, 'square', 0.12), 60);
+  setTimeout(() => playTone(800, 0.15, 'sine', 0.1), 120);
+}
+
+function playWrong() {
+  playTone(200, 0.15, 'sawtooth', 0.15);
+  setTimeout(() => playTone(150, 0.2, 'sawtooth', 0.12), 100);
+}
+
+function playFanfare() {
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((n, i) => setTimeout(() => playTone(n, 0.3, 'square', 0.1), i * 150));
+}
+
+function playPowerup() {
+  [600, 800, 1000, 1200].forEach((n, i) => setTimeout(() => playTone(n, 0.15, 'sine', 0.1), i * 80));
+}
+
+function playGobbler() {
+  playTone(120, 0.2, 'sawtooth', 0.08);
+}
+
+// =============================================
+// SPEECH (Web Speech API)
+// =============================================
+let speechSynth = window.speechSynthesis;
+let speechEnabled = true;
+
+function speak(text, interrupt = true) {
+  if (!speechSynth || !speechEnabled) return;
+  if (interrupt) speechSynth.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.rate = 0.85;
+  utter.pitch = 1.4;
+  utter.volume = 0.9;
+  // Pick a friendly English voice if available
+  const voices = speechSynth.getVoices();
+  const preferred = voices.find(v => /female|samantha|zira|karen|fiona/i.test(v.name) && /en/i.test(v.lang))
+    || voices.find(v => /en[-_]US/i.test(v.lang))
+    || voices.find(v => /en/i.test(v.lang));
+  if (preferred) utter.voice = preferred;
+  speechSynth.speak(utter);
+}
+
+// Pre-load voices (some browsers load them async)
+if (speechSynth.onvoiceschanged !== undefined) {
+  speechSynth.onvoiceschanged = () => speechSynth.getVoices();
+}
+
+const CORRECT_PHRASES = [
+  'Correct!', 'Great job!', 'Awesome!', 'You got it!', 'Nice one!',
+  'Way to go!', 'Super!', 'Fantastic!', 'Yummy!', 'Delicious!'
+];
+const WRONG_PHRASES = [
+  'Oops!', 'Not that one!', 'Uh oh!', 'Try another!', 'Oopsie!'
+];
+const GOBBLER_PHRASES_MAP = {
+  wanderer: ['Oh no, Wanderer got your monster!', 'Watch out for Wanderer!', 'The Wanderer caught Chomper!'],
+  shyguy: ['Oh no, Shy Guy bumped into Chomper!', 'Shy Guy got you!', 'Even Shy Guy caught Chomper!'],
+  hunter: ['Oh no, Hunter ate your monster!', 'The Hunter got Chomper!', 'Hunter caught up to Chomper!']
+};
+function randomPhrase(arr) { return arr[randInt(0, arr.length - 1)]; }
+
+function startBgMusic() {
+  if (bgMusicInterval) return;
+  const melody = [262,294,330,349,392,349,330,294,262,294,330,392,440,392,330,294];
+  let idx = 0;
+  bgMusicInterval = setInterval(() => {
+    if (!state.musicEnabled || !state.gameActive) return;
+    playTone(melody[idx % melody.length], 0.25, 'sine', 0.04);
+    playTone(melody[idx % melody.length] / 2, 0.25, 'triangle', 0.03);
+    idx++;
+  }, 400);
+}
+
+function stopBgMusic() {
+  if (bgMusicInterval) { clearInterval(bgMusicInterval); bgMusicInterval = null; }
+}
+
+// =============================================
+// SVG CHARACTERS
+// =============================================
+function chomperSVG(mouthOpen = false, className = '') {
+  const mouthD = mouthOpen
+    ? 'M 22 55 Q 40 75 58 55 Q 50 65 40 65 Q 30 65 22 55 Z'
+    : 'M 25 52 Q 40 62 55 52';
+  return `<svg class="chomper-svg ${className}" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
+    <ellipse class="chomper-body-main" cx="40" cy="42" rx="28" ry="26" fill="#4ecdc4"/>
+    <ellipse cx="40" cy="44" rx="25" ry="22" fill="#5fd4cb"/>
+    <ellipse cx="40" cy="38" rx="22" ry="18" fill="#6ee0d6"/>
+    <!-- Eyes -->
+    <ellipse cx="30" cy="32" rx="8" ry="9" fill="white"/>
+    <ellipse cx="50" cy="32" rx="8" ry="9" fill="white"/>
+    <circle class="chomper-pupil-l" cx="32" cy="33" r="4" fill="#1a0a2e"/>
+    <circle class="chomper-pupil-r" cx="52" cy="33" r="4" fill="#1a0a2e"/>
+    <circle cx="33" cy="31" r="1.5" fill="white"/>
+    <circle cx="53" cy="31" r="1.5" fill="white"/>
+    <!-- Mouth -->
+    <path class="chomper-mouth" d="${mouthD}" fill="${mouthOpen ? '#ff6b6b' : 'none'}" stroke="#2a6e68" stroke-width="2"/>
+    ${mouthOpen ? '<ellipse cx="40" cy="58" rx="6" ry="3" fill="#ff4757"/>' : ''}
+    <!-- Arms -->
+    <ellipse cx="14" cy="50" rx="5" ry="7" fill="#4ecdc4" transform="rotate(-15 14 50)"/>
+    <ellipse cx="66" cy="50" rx="5" ry="7" fill="#4ecdc4" transform="rotate(15 66 50)"/>
+    <!-- Feet -->
+    <ellipse cx="28" cy="66" rx="7" ry="4" fill="#3db8a9"/>
+    <ellipse cx="52" cy="66" rx="7" ry="4" fill="#3db8a9"/>
+    <!-- Cheeks -->
+    <ellipse cx="20" cy="45" rx="5" ry="3" fill="rgba(255,150,150,0.3)"/>
+    <ellipse cx="60" cy="45" rx="5" ry="3" fill="rgba(255,150,150,0.3)"/>
+  </svg>`;
+}
+
+function gobblerSVG(type) {
+  if (type === 'wanderer') {
+    return `<svg class="gobbler-svg" viewBox="0 0 70 70"><ellipse cx="35" cy="38" rx="24" ry="22" fill="#9b59b6"/>
+      <ellipse cx="35" cy="40" rx="20" ry="18" fill="#a86cc1"/>
+      <ellipse cx="27" cy="32" rx="6" ry="7" fill="white"/><ellipse cx="43" cy="32" rx="6" ry="7" fill="white"/>
+      <circle cx="29" cy="33" r="3" fill="#2c3e50"/><circle cx="45" cy="33" r="3" fill="#2c3e50"/>
+      <path d="M 28 48 Q 35 55 42 48" fill="none" stroke="#6c3483" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="22" cy="58" rx="6" ry="4" fill="#8e44ad"/><ellipse cx="48" cy="58" rx="6" ry="4" fill="#8e44ad"/>
+    </svg>`;
+  } else if (type === 'shyguy') {
+    return `<svg class="gobbler-svg" viewBox="0 0 70 70"><circle cx="35" cy="38" r="22" fill="#fd79a8"/>
+      <circle cx="35" cy="36" r="18" fill="#fab1c8"/>
+      <ellipse cx="26" cy="32" rx="8" ry="10" fill="white"/><ellipse cx="44" cy="32" rx="8" ry="10" fill="white"/>
+      <circle cx="27" cy="34" r="4" fill="#2c3e50"/><circle cx="43" cy="34" r="4" fill="#2c3e50"/>
+      <circle cx="28" cy="32" r="1.5" fill="white"/><circle cx="44" cy="32" r="1.5" fill="white"/>
+      <path d="M 30 48 Q 35 45 40 48" fill="none" stroke="#c0392b" stroke-width="2" stroke-linecap="round"/>
+      <ellipse cx="24" cy="58" rx="5" ry="3" fill="#e84393"/><ellipse cx="46" cy="58" rx="5" ry="3" fill="#e84393"/>
+    </svg>`;
+  } else {
+    return `<svg class="gobbler-svg" viewBox="0 0 70 70">
+      <polygon points="35,5 45,18 55,10 52,24 65,28 54,36 62,48 50,44 48,58 35,50 22,58 20,44 8,48 16,36 5,28 18,24 15,10 25,18" fill="#e74c3c"/>
+      <circle cx="35" cy="34" r="16" fill="#ff6b6b"/>
+      <ellipse cx="28" cy="30" rx="5" ry="6" fill="white"/><ellipse cx="42" cy="30" rx="5" ry="6" fill="white"/>
+      <circle cx="29" cy="31" r="3" fill="#2c3e50"/><circle cx="43" cy="31" r="3" fill="#2c3e50"/>
+      <path d="M 26 42 L 30 38 L 34 42 L 38 38 L 42 42" fill="none" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>`;
+  }
+}
+
+function heartSVG(filled = true) {
+  return `<svg class="hud-heart${filled ? '' : ' lost'}" viewBox="0 0 24 24">
+    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
+    fill="${filled ? '#ff6b6b' : '#444'}"/></svg>`;
+}
+
+// =============================================
+// SHAPE DRAWING
+// =============================================
+const SHAPES = {
+  triangle: { svg: '<polygon points="25,5 45,42 5,42" fill="#ff6b6b" stroke="#c0392b" stroke-width="2"/>', sides: 3, symmetric: true, name: 'triangle' },
+  square: { svg: '<rect x="7" y="7" width="34" height="34" fill="#4ecdc4" stroke="#2eaa9e" stroke-width="2"/>', sides: 4, symmetric: true, name: 'square' },
+  rectangle: { svg: '<rect x="3" y="12" width="42" height="24" fill="#f39c12" stroke="#d68910" stroke-width="2"/>', sides: 4, symmetric: true, name: 'rectangle' },
+  pentagon: { svg: '<polygon points="25,3 47,18 39,42 11,42 3,18" fill="#9b59b6" stroke="#7d3c98" stroke-width="2"/>', sides: 5, symmetric: true, name: 'pentagon' },
+  hexagon: { svg: '<polygon points="25,3 44,14 44,34 25,45 6,34 6,14" fill="#3498db" stroke="#2874a6" stroke-width="2"/>', sides: 6, symmetric: true, name: 'hexagon' },
+  circle: { svg: '<circle cx="25" cy="24" r="20" fill="#e74c3c" stroke="#b03a2e" stroke-width="2"/>', sides: 0, symmetric: true, name: 'circle' },
+  oval: { svg: '<ellipse cx="25" cy="24" rx="22" ry="14" fill="#1abc9c" stroke="#148f77" stroke-width="2"/>', sides: 0, symmetric: true, name: 'oval' },
+  diamond: { svg: '<polygon points="25,3 47,24 25,45 3,24" fill="#f1c40f" stroke="#d4ac0d" stroke-width="2"/>', sides: 4, symmetric: true, name: 'diamond' },
+  star: { svg: '<polygon points="25,2 31,18 48,18 34,28 39,45 25,35 11,45 16,28 2,18 19,18" fill="#FFD700" stroke="#DAA520" stroke-width="1.5"/>', sides: 10, symmetric: true, name: 'star' },
+  trapezoid: { svg: '<polygon points="12,38 38,38 44,10 6,10" fill="#e67e22" stroke="#ca6f1e" stroke-width="2"/>', sides: 4, symmetric: true, name: 'trapezoid' },
+  parallelogram: { svg: '<polygon points="10,38 38,38 42,10 14,10" fill="#2ecc71" stroke="#27ae60" stroke-width="2"/>', sides: 4, symmetric: false, name: 'parallelogram' },
+  arrow: { svg: '<polygon points="25,2 45,22 35,22 35,45 15,45 15,22 5,22" fill="#e84393" stroke="#c2185b" stroke-width="1.5"/>', sides: 7, symmetric: true, name: 'arrow' },
+};
+
+function shapeSVGCell(shapeKey) {
+  const s = SHAPES[shapeKey];
+  return `<svg class="shape-svg" viewBox="0 0 50 48">${s.svg}</svg>`;
+}
+
+// =============================================
+// MATH LEVEL GENERATORS
+// =============================================
+function generateLevel() {
+  const g = state.grade;
+  const cat = state.category;
+  const sub = state.subLevel;
+
+  let prompt, cells, isCorrect;
+
+  if (cat === 'whole') {
+    ({ prompt, cells, isCorrect } = generateWholeNumbers(g, sub));
+  } else if (cat === 'fractions') {
+    ({ prompt, cells, isCorrect } = generateFractions(g, sub));
+  } else if (cat === 'decimals') {
+    ({ prompt, cells, isCorrect } = generateDecimals(g, sub));
+  } else {
+    ({ prompt, cells, isCorrect } = generateGeometry(g, sub));
+  }
+
+  return { prompt, cells, isCorrect };
+}
+
+function generateWholeNumbers(grade, sub) {
+  const lvl = sub % 17;
+  let prompt, cells, isCorrect;
+
+  if (grade <= 2) {
+    if (lvl < 4) {
+      // Addition: "Eat answers equal to N"
+      const target = 3 + lvl * 2 + Math.floor(Math.random() * 3);
+      prompt = `Eat answers equal to ${target}`;
+      cells = makeExpressionCells(target, '+', 15, grade);
+      isCorrect = (c) => c.value === target;
+    } else if (lvl < 8) {
+      // Subtraction
+      const target = 2 + Math.floor(Math.random() * 6);
+      prompt = `Eat answers equal to ${target}`;
+      cells = makeExpressionCells(target, '-', 15, grade);
+      isCorrect = (c) => c.value === target;
+    } else if (lvl < 12) {
+      // Even/Odd
+      const wantEven = lvl % 2 === 0;
+      prompt = wantEven ? 'Eat the even numbers' : 'Eat the odd numbers';
+      cells = makeNumberCells(1, 20, 20);
+      isCorrect = wantEven ? (c) => c.value % 2 === 0 : (c) => c.value % 2 !== 0;
+    } else {
+      // Counting by N
+      const n = [2, 5, 10][lvl % 3];
+      prompt = `Eat multiples of ${n}`;
+      cells = makeNumberCells(1, n * 10, 20);
+      isCorrect = (c) => c.value % n === 0;
+    }
+  } else if (grade <= 4) {
+    if (lvl < 5) {
+      const n = [3, 4, 6, 7, 8][lvl % 5];
+      prompt = `Eat multiples of ${n}`;
+      cells = makeNumberCells(1, n * 12, 20);
+      isCorrect = (c) => c.value % n === 0;
+    } else if (lvl < 10) {
+      const targets = [12, 18, 24, 30, 36];
+      const t = targets[lvl % 5];
+      prompt = `Eat factors of ${t}`;
+      cells = makeNumberCells(1, t, 20);
+      isCorrect = (c) => t % c.value === 0;
+    } else if (lvl < 14) {
+      const target = 10 + lvl * 3 + Math.floor(Math.random() * 5);
+      prompt = `Eat expressions equal to ${target}`;
+      cells = makeExpressionCells(target, '+-×', 30, grade);
+      isCorrect = (c) => c.value === target;
+    } else {
+      prompt = 'Eat the prime numbers';
+      cells = makeNumberCells(2, 50, 20);
+      isCorrect = (c) => isPrime(c.value);
+    }
+  } else {
+    if (lvl < 5) {
+      prompt = 'Eat the prime numbers';
+      cells = makeNumberCells(2, 100, 20);
+      isCorrect = (c) => isPrime(c.value);
+    } else if (lvl < 10) {
+      const targets = [48, 60, 72, 84, 96];
+      const t = targets[lvl % 5];
+      prompt = `Eat factors of ${t}`;
+      cells = makeNumberCells(1, t, 20);
+      isCorrect = (c) => t % c.value === 0;
+    } else if (lvl < 14) {
+      const target = 20 + lvl * 5 + Math.floor(Math.random() * 10);
+      prompt = `Eat expressions NOT equal to ${target}`;
+      cells = makeExpressionCells(target, '+-×', 50, grade);
+      isCorrect = (c) => c.value !== target;
+    } else {
+      const n = [7, 9, 11, 12][lvl % 4];
+      prompt = `Eat multiples of ${n}`;
+      cells = makeNumberCells(1, n * 15, 20);
+      isCorrect = (c) => c.value % n === 0;
+    }
+  }
+
+  return { prompt, cells, isCorrect };
+}
+
+function generateFractions(grade, sub) {
+  const lvl = sub % 17;
+  let prompt, cells, isCorrect;
+
+  if (grade <= 2) {
+    // Simple fractions - proper vs improper
+    if (lvl < 9) {
+      prompt = 'Eat the proper fractions';
+      cells = makeFractionCells(10, false);
+      isCorrect = (c) => c.num < c.den;
+    } else {
+      prompt = 'Eat fractions equal to one whole';
+      cells = makeFractionCells(10, true);
+      isCorrect = (c) => c.num === c.den;
+    }
+  } else if (grade <= 4) {
+    if (lvl < 6) {
+      const targets = [[1,2],[1,3],[1,4],[2,3],[3,4],[2,5]];
+      const [tn, td] = targets[lvl % targets.length];
+      prompt = `Eat fractions equal to ${tn}/${td}`;
+      cells = makeEquivFractionCells(tn, td, 10);
+      isCorrect = (c) => (c.num / c.den) === (tn / td);
+    } else if (lvl < 12) {
+      const targets = [[1,2],[2,3],[3,4],[1,3],[3,5],[2,5]];
+      const [tn, td] = targets[lvl % targets.length];
+      prompt = `Eat fractions less than ${tn}/${td}`;
+      cells = makeFractionCells(12, false);
+      isCorrect = (c) => (c.num / c.den) < (tn / td);
+    } else {
+      prompt = 'Eat the proper fractions';
+      cells = makeFractionCells(12, false);
+      isCorrect = (c) => c.num < c.den;
+    }
+  } else {
+    if (lvl < 6) {
+      const targets = [[1,2],[1,3],[2,5],[3,8],[5,6],[4,7]];
+      const [tn, td] = targets[lvl % targets.length];
+      prompt = `Eat fractions equal to ${tn}/${td}`;
+      cells = makeEquivFractionCells(tn, td, 15);
+      isCorrect = (c) => Math.abs(c.num / c.den - tn / td) < 0.001;
+    } else if (lvl < 12) {
+      const targets = [[1,2],[2,3],[3,4],[1,5],[5,8],[7,10]];
+      const [tn, td] = targets[lvl % targets.length];
+      prompt = `Eat fractions greater than ${tn}/${td}`;
+      cells = makeFractionCells(15, false);
+      isCorrect = (c) => (c.num / c.den) > (tn / td) && c.num < c.den;
+    } else {
+      prompt = 'Eat improper fractions';
+      cells = makeFractionCells(15, false);
+      isCorrect = (c) => c.num >= c.den;
+    }
+  }
+
+  return { prompt, cells, isCorrect };
+}
+
+function generateDecimals(grade, sub) {
+  const lvl = sub % 17;
+  let prompt, cells, isCorrect;
+
+  if (grade <= 2) {
+    // Simple decimals matching
+    const targets = [0.5, 1.0, 1.5, 2.0, 2.5];
+    const t = targets[lvl % targets.length];
+    prompt = `Eat decimals equal to ${t}`;
+    cells = makeDecimalCells(t, 'equal', 1);
+    isCorrect = (c) => Math.abs(c.value - t) < 0.001;
+  } else if (grade <= 4) {
+    if (lvl < 6) {
+      const targets = [0.25, 0.5, 0.75, 0.1, 0.2, 0.3];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat decimals equal to ${t}`;
+      cells = makeDecimalCells(t, 'equal', 2);
+      isCorrect = (c) => Math.abs(c.value - t) < 0.001;
+    } else if (lvl < 12) {
+      const targets = [0.5, 0.25, 0.75, 0.3, 0.6, 0.8];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat decimals greater than ${t}`;
+      cells = makeDecimalCells(t, 'greater', 2);
+      isCorrect = (c) => c.value > t + 0.001;
+    } else {
+      const targets = [3, 5, 7, 10, 4];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat numbers that round to ${t}`;
+      cells = makeRoundingCells(t);
+      isCorrect = (c) => Math.round(c.value) === t;
+    }
+  } else {
+    if (lvl < 6) {
+      const targets = [0.125, 0.375, 0.625, 0.875, 0.15, 0.35];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat decimals equal to ${t}`;
+      cells = makeDecimalCells(t, 'equal', 3);
+      isCorrect = (c) => Math.abs(c.value - t) < 0.0001;
+    } else if (lvl < 12) {
+      const targets = [0.5, 0.25, 0.75, 0.1, 0.9, 0.33];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat decimals less than ${t}`;
+      cells = makeDecimalCells(t, 'less', 3);
+      isCorrect = (c) => c.value < t - 0.0001;
+    } else {
+      const targets = [3, 5, 7, 10, 15];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat numbers that round to ${t}`;
+      cells = makeRoundingCells(t);
+      isCorrect = (c) => Math.round(c.value) === t;
+    }
+  }
+
+  return { prompt, cells, isCorrect };
+}
+
+function generateGeometry(grade, sub) {
+  const lvl = sub % 17;
+  let prompt, cells, isCorrect;
+  const allShapeKeys = Object.keys(SHAPES);
+
+  if (grade <= 2) {
+    if (lvl < 6) {
+      const targets = ['circle', 'square', 'triangle', 'rectangle', 'star', 'diamond'];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat all the ${t}s`;
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => c.shape === t;
+    } else if (lvl < 12) {
+      const sideTargets = [3, 4, 0, 5, 6, 4];
+      const st = sideTargets[lvl % sideTargets.length];
+      prompt = st === 0 ? 'Eat shapes with no sides (round)' : `Eat shapes with ${st} sides`;
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => SHAPES[c.shape].sides === st;
+    } else {
+      prompt = 'Eat shapes with a line of symmetry';
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => SHAPES[c.shape].symmetric;
+    }
+  } else if (grade <= 4) {
+    if (lvl < 6) {
+      const targets = ['pentagon', 'hexagon', 'trapezoid', 'parallelogram', 'oval', 'diamond'];
+      const t = targets[lvl % targets.length];
+      prompt = `Eat all the ${t}s`;
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => c.shape === t;
+    } else if (lvl < 12) {
+      const sideTargets = [4, 5, 6, 3, 0, 7];
+      const st = sideTargets[lvl % sideTargets.length];
+      prompt = st === 0 ? 'Eat round shapes' : `Eat shapes with ${st} sides`;
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => SHAPES[c.shape].sides === st;
+    } else {
+      prompt = 'Eat shapes WITHOUT symmetry';
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => !SHAPES[c.shape].symmetric;
+    }
+  } else {
+    if (lvl < 6) {
+      const sideTargets = [3, 4, 5, 6, 0, 7];
+      const st = sideTargets[lvl % sideTargets.length];
+      prompt = st === 0 ? 'Eat round shapes' : `Eat shapes with exactly ${st} sides`;
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => SHAPES[c.shape].sides === st;
+    } else if (lvl < 12) {
+      const targets = [4, 3, 5];
+      const st = targets[lvl % targets.length];
+      prompt = `Eat shapes with more than ${st} sides`;
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => SHAPES[c.shape].sides > st;
+    } else {
+      prompt = 'Eat shapes with a line of symmetry';
+      cells = makeShapeCells(allShapeKeys, 20);
+      isCorrect = (c) => SHAPES[c.shape].symmetric;
+    }
+  }
+
+  return { prompt, cells, isCorrect };
+}
+
+// =============================================
+// CELL GENERATORS
+// =============================================
+function makeNumberCells(min, max, count) {
+  const cells = [];
+  for (let i = 0; i < count; i++) {
+    const v = randInt(min, max);
+    cells.push({ display: String(v), value: v, type: 'number' });
+  }
+  return cells;
+}
+
+function makeExpressionCells(target, ops, range, grade) {
+  const cells = [];
+  const maxNum = grade <= 2 ? 15 : grade <= 4 ? 30 : range;
+  // Ensure some correct
+  const correctCount = randInt(5, 10);
+  for (let i = 0; i < correctCount; i++) {
+    const expr = makeExprForTarget(target, ops, maxNum);
+    cells.push(expr);
+  }
+  // Fill rest with wrong
+  while (cells.length < 20) {
+    const wrong = target + randInt(1, 10) * (Math.random() > 0.5 ? 1 : -1);
+    if (wrong <= 0 || wrong === target) {
+      // Generate a single random value and use it for both display and value
+      let fallback = randInt(1, maxNum);
+      // Make sure it doesn't accidentally equal the target
+      while (fallback === target) fallback = randInt(1, maxNum);
+      cells.push({ display: String(fallback), value: fallback, type: 'expression' });
+      continue;
+    }
+    const expr = makeExprForTarget(wrong, ops, maxNum);
+    cells.push(expr);
+  }
+  return shuffle(cells);
+}
+
+function makeExprForTarget(target, ops, maxNum) {
+  const op = ops[randInt(0, ops.length - 1)];
+  let a, b, display;
+  if (op === '+') {
+    a = randInt(0, Math.min(target, maxNum));
+    b = target - a;
+    display = `${a}+${b}`;
+  } else if (op === '-') {
+    b = randInt(0, Math.min(target, maxNum));
+    a = target + b;
+    display = `${a}-${b}`;
+  } else if (op === '×') {
+    const factors = [];
+    for (let i = 1; i <= Math.min(target, 12); i++) { if (target % i === 0) factors.push(i); }
+    a = factors.length > 0 ? factors[randInt(0, factors.length - 1)] : 1;
+    b = target / a;
+    display = `${a}×${b}`;
+  } else {
+    a = randInt(0, Math.min(target, maxNum));
+    b = target - a;
+    display = `${a}+${b}`;
+  }
+  return { display, value: target, type: 'expression' };
+}
+
+function makeFractionCells(maxDen, includeWholes) {
+  const cells = [];
+  for (let i = 0; i < 20; i++) {
+    const den = randInt(2, maxDen);
+    let num;
+    if (includeWholes && Math.random() < 0.3) {
+      num = den;
+    } else {
+      num = randInt(1, den * 2);
+    }
+    cells.push({ display: 'frac', num, den, value: num / den, type: 'fraction' });
+  }
+  return cells;
+}
+
+function makeEquivFractionCells(tn, td, maxMult) {
+  const cells = [];
+  const correctCount = randInt(5, 9);
+  for (let i = 0; i < correctCount; i++) {
+    const mult = randInt(1, Math.min(maxMult, 5));
+    cells.push({ display: 'frac', num: tn * mult, den: td * mult, value: tn / td, type: 'fraction' });
+  }
+  while (cells.length < 20) {
+    const den = randInt(2, maxMult);
+    let num = randInt(1, den * 2);
+    if (Math.abs(num / den - tn / td) < 0.001) num += 1;
+    cells.push({ display: 'frac', num, den, value: num / den, type: 'fraction' });
+  }
+  return shuffle(cells);
+}
+
+function makeDecimalCells(target, comparison, decimals) {
+  const cells = [];
+  const correctCount = randInt(5, 10);
+  const step = Math.pow(10, -decimals);
+
+  if (comparison === 'equal') {
+    for (let i = 0; i < correctCount; i++) {
+      cells.push({ display: target.toFixed(decimals), value: target, type: 'decimal' });
+    }
+    while (cells.length < 20) {
+      let v = +(Math.random() * 2).toFixed(decimals);
+      if (Math.abs(v - target) < step / 2) v = +(v + step * 3).toFixed(decimals);
+      cells.push({ display: v.toFixed(decimals), value: v, type: 'decimal' });
+    }
+  } else {
+    for (let i = 0; i < 20; i++) {
+      const v = +(Math.random() * 2).toFixed(decimals);
+      cells.push({ display: v.toFixed(decimals), value: v, type: 'decimal' });
+    }
+  }
+  return shuffle(cells);
+}
+
+function makeRoundingCells(target) {
+  const cells = [];
+  const correctCount = randInt(5, 9);
+  for (let i = 0; i < correctCount; i++) {
+    const v = +(target - 0.5 + Math.random()).toFixed(1);
+    if (Math.round(v) === target) cells.push({ display: v.toFixed(1), value: v, type: 'decimal' });
+    else i--;
+  }
+  while (cells.length < 20) {
+    const v = +(randInt(Math.max(1, target - 5), target + 5) - 0.5 + Math.random()).toFixed(1);
+    cells.push({ display: v.toFixed(1), value: v, type: 'decimal' });
+  }
+  return shuffle(cells);
+}
+
+function makeShapeCells(shapeKeys, count) {
+  const cells = [];
+  for (let i = 0; i < count; i++) {
+    const key = shapeKeys[randInt(0, shapeKeys.length - 1)];
+    cells.push({ display: 'shape', shape: key, value: key, type: 'shape' });
+  }
+  return cells;
+}
+
+// =============================================
+// MATH HELPERS
+// =============================================
+function isPrime(n) {
+  if (n < 2) return false;
+  if (n < 4) return true;
+  if (n % 2 === 0 || n % 3 === 0) return false;
+  for (let i = 5; i * i <= n; i += 6) {
+    if (n % i === 0 || n % (i + 2) === 0) return false;
+  }
+  return true;
+}
+function randInt(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = randInt(0, i); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
+// =============================================
+// RENDERING
+// =============================================
+function renderCell(cellData, idx) {
+  const colorClass = `color-${idx % 6}`;
+  let content = '';
+  if (cellData.type === 'fraction') {
+    content = `<div class="cell-content"><span class="frac"><span class="frac-num">${cellData.num}</span><span class="frac-bar"></span><span class="frac-den">${cellData.den}</span></span></div>`;
+  } else if (cellData.type === 'shape') {
+    content = `<div class="cell-content">${shapeSVGCell(cellData.shape)}</div>`;
+  } else {
+    content = `<div class="cell-content">${cellData.display}</div>`;
+  }
+  return `<div class="cell ${colorClass}" data-idx="${idx}">${content}</div>`;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('gameGrid');
+  const pool = state.prompt.cells;
+  state.grid = [];
+
+  let correctCells = pool.filter(c => state.prompt.isCorrect(c));
+  const wrongCells = pool.filter(c => !state.prompt.isCorrect(c));
+
+  // Guarantee at least 3 correct cells in the pool by duplicating existing ones
+  const MIN_CORRECT = 3;
+  if (correctCells.length > 0 && correctCells.length < MIN_CORRECT) {
+    while (correctCells.length < MIN_CORRECT) {
+      correctCells.push({...correctCells[randInt(0, correctCells.length - 1)]});
+    }
+  } else if (correctCells.length === 0) {
+    // Pool had zero correct — regenerate the level
+    state.prompt = generateLevel();
+    renderGrid();
+    return;
+  }
+
+  // Pick cells: ensure min 3 correct, fill rest with wrong
+  const numCorrect = Math.max(MIN_CORRECT, randInt(MIN_CORRECT, Math.min(8, correctCells.length)));
+  const picked = shuffle([...correctCells]).slice(0, numCorrect);
+  const remaining = COLS * ROWS - picked.length;
+  const wrongPick = shuffle([...wrongCells]).slice(0, remaining);
+  let combined = [...picked, ...wrongPick];
+
+  // Fill any remaining slots with new wrong cells to avoid shared references
+  while (combined.length < COLS * ROWS) {
+    const src = wrongCells.length > 0
+      ? wrongCells[randInt(0, wrongCells.length - 1)]
+      : pool[randInt(0, pool.length - 1)];
+    combined.push({...src});
+  }
+
+  // Clone every cell object so no two grid slots share a reference
+  state.grid = shuffle(combined).slice(0, COLS * ROWS).map(c => ({...c}));
+
+  grid.innerHTML = state.grid.map((c, i) => renderCell(c, i)).join('');
+
+  // Initialize cell state
+  state.grid.forEach((c, i) => {
+    c.eaten = false;
+    c.idx = i;
+  });
+
+  renderChomper();
+  renderGobblers();
+  renderLives();
+  updateHudScore();
+  document.getElementById('promptText').textContent = state.prompt.prompt;
+  document.getElementById('hudLevel').textContent = `Level ${state.level}`;
+}
+
+function renderChomper() {
+  let ch = document.querySelector('.chomper-on-grid');
+  if (!ch) {
+    ch = document.createElement('div');
+    ch.className = 'chomper-on-grid idle';
+    ch.innerHTML = chomperSVG(false);
+    document.getElementById('gridContainer').appendChild(ch);
+  }
+  positionEntity(ch, state.chomper.col, state.chomper.row);
+}
+
+function renderGobblers() {
+  // Remove old
+  document.querySelectorAll('.gobbler-on-grid').forEach(el => el.remove());
+  if (!state.gobblersEnabled) return;
+
+  state.gobblers.forEach((g, i) => {
+    const el = document.createElement('div');
+    el.className = `gobbler-on-grid ${g.type}`;
+    el.id = `gobbler-${i}`;
+    el.innerHTML = gobblerSVG(g.type);
+    document.getElementById('gridContainer').appendChild(el);
+    positionEntity(el, g.col, g.row);
+  });
+}
+
+function positionEntity(el, col, row) {
+  const grid = document.getElementById('gameGrid');
+  const cells = grid.querySelectorAll('.cell');
+  const idx = row * COLS + col;
+  if (idx >= cells.length) return;
+  const cell = cells[idx];
+  const gridRect = grid.getBoundingClientRect();
+  const containerRect = document.getElementById('gridContainer').getBoundingClientRect();
+  const cellRect = cell.getBoundingClientRect();
+
+  el.style.left = (cellRect.left - containerRect.left + cellRect.width / 2 - el.offsetWidth / 2) + 'px';
+  el.style.top = (cellRect.top - containerRect.top + cellRect.height / 2 - el.offsetHeight / 2) + 'px';
+}
+
+function updatePositions() {
+  const ch = document.querySelector('.chomper-on-grid');
+  if (ch) positionEntity(ch, state.chomper.col, state.chomper.row);
+
+  state.gobblers.forEach((g, i) => {
+    const el = document.getElementById(`gobbler-${i}`);
+    if (el) positionEntity(el, g.col, g.row);
+  });
+}
+
+function renderLives() {
+  const container = document.getElementById('hudLives');
+  let html = '';
+  for (let i = 0; i < 4; i++) {
+    html += heartSVG(i < state.lives);
+  }
+  container.innerHTML = html;
+}
+
+function updateHudScore() {
+  document.getElementById('hudScore').textContent = state.score;
+}
+
+// =============================================
+// GAME LOGIC
+// =============================================
+function startGame() {
+  initAudio();
+  closeAllModals();
+  state.grade = parseInt(document.getElementById('gradeSelect').value);
+  state.category = document.getElementById('categorySelect').value;
+  state.score = 0;
+  state.lives = 4;
+  state.level = 1;
+  state.subLevel = 0;
+  state.totalLevelsCompleted = 0;
+  state.invincible = false;
+  state.gameActive = true;
+  state.chomper = { col: 2, row: 1 };
+
+  showScreen('gameScreen');
+  loadLevel();
+  if (state.musicEnabled) startBgMusic();
+}
+
+function loadLevel() {
+  state.gameActive = true;
+  state.chomper = { col: 2, row: 1 };
+  state.invincible = false;
+  if (state.invincibleTimer) clearTimeout(state.invincibleTimer);
+  state.cookie = null;
+  state.safeZones = [];
+
+  // Clear timers
+  if (gobblersInterval) clearInterval(gobblersInterval);
+  if (safeZoneTimeout) clearTimeout(safeZoneTimeout);
+  if (cookieTimeout) clearTimeout(cookieTimeout);
+
+  const levelData = generateLevel();
+  state.prompt = levelData;
+  state.levelStartTime = Date.now();
+
+  // Setup gobblers
+  state.gobblers = [];
+  if (state.gobblersEnabled) {
+    const numGobblers = Math.min(1 + Math.floor(state.level / 2), 4);
+    const types = ['wanderer', 'shyguy', 'hunter'];
+    for (let i = 0; i < numGobblers; i++) {
+      const type = state.level < 3 ? 'wanderer' : types[Math.min(i, types.length - 1)];
+      state.gobblers.push({
+        type,
+        col: i % 2 === 0 ? 0 : COLS - 1,
+        row: i < 2 ? 0 : ROWS - 1,
+        dir: randInt(0, 3)
+      });
+    }
+  }
+
+  renderGrid();
+
+  // Start gobbler movement
+  if (state.gobblersEnabled && state.gobblers.length > 0) {
+    gobblersInterval = setInterval(moveGobblers, 1200);
+  }
+
+  // Schedule safe zone
+  if (state.gobblersEnabled) {
+    scheduleSafeZone();
+    scheduleCookie();
+  }
+
+  // Position after render
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => updatePositions());
+  });
+
+  // Narrate the prompt
+  setTimeout(() => speak(state.prompt.prompt), 300);
+}
+
+function moveChomper(dir) {
+  if (!state.gameActive || state.moveTimeout) return;
+  state.moveTimeout = true;
+  setTimeout(() => state.moveTimeout = false, 120);
+
+  const { col, row } = state.chomper;
+  let nc = col, nr = row;
+  if (dir === 'up' && row > 0) nr--;
+  else if (dir === 'down' && row < ROWS - 1) nr++;
+  else if (dir === 'left' && col > 0) nc--;
+  else if (dir === 'right' && col < COLS - 1) nc++;
+  else return;
+
+  state.chomper = { col: nc, row: nr };
+  const ch = document.querySelector('.chomper-on-grid');
+  if (ch) {
+    ch.classList.remove('idle');
+    positionEntity(ch, nc, nr);
+    setTimeout(() => ch.classList.add('idle'), 200);
+  }
+
+  checkGobblersCollision();
+}
+
+function munchCell() {
+  if (!state.gameActive) return;
+  const idx = state.chomper.row * COLS + state.chomper.col;
+  const cell = state.grid[idx];
+  if (!cell || cell.eaten) return;
+
+  const ch = document.querySelector('.chomper-on-grid');
+  const gridCells = document.querySelectorAll('.cell');
+  const cellEl = gridCells[idx];
+
+  // Check for cookie
+  if (state.cookie && state.cookie.col === state.chomper.col && state.cookie.row === state.chomper.row) {
+    activateCookie();
+    return;
+  }
+
+  const orbEl = cellEl ? cellEl.querySelector('.cell-content') : null;
+
+  if (state.prompt.isCorrect(cell)) {
+    // Correct!
+    cell.eaten = true;
+    state.score += 10;
+    playChomp();
+    if (ch) {
+      ch.innerHTML = chomperSVG(true);
+      ch.classList.add('munching');
+      setTimeout(() => { ch.innerHTML = chomperSVG(false); ch.classList.remove('munching'); }, 300);
+    }
+    if (orbEl) orbEl.classList.add('eaten');
+    showFloatingPoints(cellEl, '+10', '#4ecdc4');
+    updateHudScore();
+    speak(randomPhrase(CORRECT_PHRASES), false);
+
+    // Check level complete
+    const allCorrect = state.grid.filter(c => state.prompt.isCorrect(c) && !c.eaten);
+    if (allCorrect.length === 0) {
+      levelComplete();
+    }
+  } else {
+    // Wrong!
+    state.score = Math.max(0, state.score - 5);
+    state.lives--;
+    playWrong();
+    if (ch) {
+      ch.classList.add('wrong');
+      setTimeout(() => ch.classList.remove('wrong'), 400);
+    }
+    if (orbEl) orbEl.classList.add('wrong-eat');
+    setTimeout(() => { if (orbEl) orbEl.classList.remove('wrong-eat'); }, 400);
+    showFloatingPoints(cellEl, '-5', '#ff6b6b');
+    updateHudScore();
+    renderLives();
+    speak(randomPhrase(WRONG_PHRASES));
+
+    if (state.lives <= 0) {
+      gameOver();
+    }
+  }
+}
+
+function showFloatingPoints(el, text, color) {
+  if (!el) return;
+  const fp = document.createElement('div');
+  fp.className = 'floating-points';
+  fp.textContent = text;
+  fp.style.color = color;
+  const rect = el.getBoundingClientRect();
+  const contRect = document.getElementById('gridContainer').getBoundingClientRect();
+  fp.style.left = (rect.left - contRect.left + rect.width / 2 - 20) + 'px';
+  fp.style.top = (rect.top - contRect.top) + 'px';
+  document.getElementById('gridContainer').appendChild(fp);
+  setTimeout(() => fp.remove(), 1000);
+}
+
+function levelComplete() {
+  state.gameActive = false;
+  if (gobblersInterval) clearInterval(gobblersInterval);
+  playFanfare();
+  speak('Level complete! Great work!');
+
+  const timeBonus = Math.max(0, Math.floor((60000 - (Date.now() - state.levelStartTime)) / 1000) * 2);
+  const levelScore = state.grid.filter(c => c.eaten && state.prompt.isCorrect(c)).length * 10;
+
+  // Victory animation
+  const ch = document.querySelector('.chomper-on-grid');
+  if (ch) ch.classList.add('victory-chomper');
+
+  setTimeout(() => {
+    if (ch) ch.classList.remove('victory-chomper');
+    document.getElementById('lcTitle').textContent = `Level ${state.level} Complete!`;
+    document.getElementById('lcScore').textContent = `Points: ${levelScore}`;
+    document.getElementById('lcBonus').textContent = `Time Bonus: +${timeBonus}`;
+    state.score += timeBonus;
+    document.getElementById('lcTotal').textContent = `Total Score: ${state.score}`;
+    updateHudScore();
+    document.getElementById('levelCompleteModal').classList.add('active');
+  }, 1500);
+}
+
+function nextLevel() {
+  closeAllModals();
+  state.level++;
+  state.subLevel++;
+  state.totalLevelsCompleted++;
+
+  // Cutscene every 3 levels
+  if (state.totalLevelsCompleted > 0 && state.totalLevelsCompleted % 3 === 0) {
+    playCutscene();
+  } else {
+    loadLevel();
+  }
+}
+
+function gameOver() {
+  state.gameActive = false;
+  if (gobblersInterval) clearInterval(gobblersInterval);
+  stopBgMusic();
+
+  // Save to hall of fame
+  hallOfFame.push({ score: state.score, level: state.level, grade: state.grade, category: state.category });
+  hallOfFame.sort((a, b) => b.score - a.score);
+  hallOfFame = hallOfFame.slice(0, 10);
+
+  setTimeout(() => {
+    document.getElementById('goScore').textContent = `Final Score: ${state.score}`;
+    document.getElementById('goLevel').textContent = `Reached Level ${state.level}`;
+    document.getElementById('gameOverModal').classList.add('active');
+  }, 500);
+}
+
+function returnToMenu() {
+  state.gameActive = false;
+  if (gobblersInterval) clearInterval(gobblersInterval);
+  if (safeZoneTimeout) clearTimeout(safeZoneTimeout);
+  if (cookieTimeout) clearTimeout(cookieTimeout);
+  stopBgMusic();
+  closeAllModals();
+
+  // Clean up game entities
+  document.querySelectorAll('.chomper-on-grid, .gobbler-on-grid, .floating-points').forEach(el => el.remove());
+
+  showScreen('menuScreen');
+}
+
+// =============================================
+// GOBBLERS AI
+// =============================================
+function moveGobblers() {
+  if (!state.gameActive) return;
+
+  const occupied = new Map();
+  state.gobblers.forEach((g, i) => {
+    if (g.hideState) return; // hiding gobblers don't occupy cells
+    const key = `${g.col},${g.row}`;
+    if (occupied.has(key)) {
+      const otherIdx = occupied.get(key);
+      state.gobblers.splice(i > otherIdx ? i : otherIdx, 1);
+      const removeId = i > otherIdx ? i : otherIdx;
+      const el = document.getElementById(`gobbler-${removeId}`);
+      if (el) el.remove();
+      playGobbler();
+      renderGobblers();
+      return;
+    }
+    occupied.set(key, i);
+  });
+
+  const isSafe = (c, r) => state.safeZones.some(sz => sz.col === c && sz.row === r);
+
+  state.gobblers.forEach((g, i) => {
+    const el = document.getElementById(`gobbler-${i}`);
+
+    // ---- Handle hiding state machine ----
+    if (g.hideState === 'sinking') {
+      // Already peeked for one tick, now fully vanish
+      g.hideState = 'hidden';
+      g.hideTimer = randInt(3, 6);
+      if (el) {
+        el.classList.remove('hiding');
+        el.classList.add('hidden');
+        clearEdgeOffset(el);
+      }
+      return;
+    }
+    if (g.hideState === 'hidden') {
+      g.hideTimer--;
+      if (g.hideTimer <= 0) {
+        // Pick a random edge cell to reappear at
+        const edge = randomEdgeCell();
+        g.col = edge.col;
+        g.row = edge.row;
+        g.hideEdge = edgeDirection(edge.col, edge.row);
+        g.hideState = 'peeking';
+        g.hideTimer = 2;
+        if (el) {
+          el.classList.remove('hidden');
+          el.classList.add('peeking');
+          positionEntity(el, g.col, g.row);
+          applyEdgeOffset(el, g.hideEdge);
+        }
+      }
+      return;
+    }
+    if (g.hideState === 'peeking') {
+      g.hideTimer--;
+      if (g.hideTimer <= 0) {
+        // Fully emerge — slide back to cell center
+        g.hideState = null;
+        if (el) {
+          el.classList.remove('peeking');
+          clearEdgeOffset(el);
+        }
+      }
+      return;
+    }
+
+    // ---- Hunter moves every other tick (half speed) ----
+    if (g.type === 'hunter') {
+      g.moveSkip = !g.moveSkip;
+      if (g.moveSkip) return;
+    }
+
+    // ---- Check if on edge: chance to hide ----
+    const onEdge = g.col === 0 || g.col === COLS - 1 || g.row === 0 || g.row === ROWS - 1;
+    if (onEdge && !g.hideState && Math.random() < 0.08) {
+      g.hideState = 'sinking';
+      g.hideEdge = edgeDirection(g.col, g.row);
+      if (el) {
+        el.classList.add('hiding');
+        applyEdgeOffset(el, g.hideEdge);
+      }
+      return;
+    }
+
+    // ---- Normal movement ----
+    let nc = g.col, nr = g.row;
+
+    if (g.type === 'wanderer') {
+      const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+      const d = dirs[g.dir];
+      nc = g.col + d[0];
+      nr = g.row + d[1];
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS || isSafe(nc, nr)) {
+        g.dir = randInt(0, 3);
+        return;
+      }
+    } else if (g.type === 'shyguy') {
+      const dx = state.chomper.col - g.col;
+      const dy = state.chomper.row - g.row;
+      const dist = Math.abs(dx) + Math.abs(dy);
+      if (dist <= 2) {
+        nc = g.col - Math.sign(dx);
+        nr = g.row - Math.sign(dy);
+      } else {
+        const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+        const d = dirs[randInt(0, 3)];
+        nc = g.col + d[0];
+        nr = g.row + d[1];
+      }
+    } else if (g.type === 'hunter') {
+      const dx = state.chomper.col - g.col;
+      const dy = state.chomper.row - g.row;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        nc = g.col + Math.sign(dx);
+      } else if (dy !== 0) {
+        nr = g.row + Math.sign(dy);
+      }
+    }
+
+    if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS && !isSafe(nc, nr)) {
+      g.col = nc;
+      g.row = nr;
+      if (el) positionEntity(el, nc, nr);
+    }
+  });
+
+  // Check collision with same cell gobblers (skip hidden ones)
+  for (let i = state.gobblers.length - 1; i >= 0; i--) {
+    for (let j = i - 1; j >= 0; j--) {
+      if (state.gobblers[i] && state.gobblers[j] &&
+          !state.gobblers[i].hideState && !state.gobblers[j].hideState &&
+          state.gobblers[i].col === state.gobblers[j].col &&
+          state.gobblers[i].row === state.gobblers[j].row) {
+        state.gobblers.splice(i, 1);
+        playGobbler();
+        renderGobblers();
+        break;
+      }
+    }
+  }
+
+  checkGobblersCollision();
+}
+
+function randomEdgeCell() {
+  const edges = [];
+  for (let c = 0; c < COLS; c++) { edges.push({col:c, row:0}); edges.push({col:c, row:ROWS-1}); }
+  for (let r = 1; r < ROWS - 1; r++) { edges.push({col:0, row:r}); edges.push({col:COLS-1, row:r}); }
+  return edges[randInt(0, edges.length - 1)];
+}
+
+function edgeDirection(col, row) {
+  // Determine which grid edge this cell is closest to / on
+  // Prefer top/bottom over left/right for corners
+  if (row === 0) return 'top';
+  if (row === ROWS - 1) return 'bottom';
+  if (col === 0) return 'left';
+  if (col === COLS - 1) return 'right';
+  return 'bottom'; // fallback
+}
+
+function applyEdgeOffset(el, dir) {
+  // Slide the gobbler under the grid edge. Since hiding gobblers have
+  // z-index:4 (below grid-wrapper z-index:10), the grid tiles physically
+  // cover the gobbler. Only the part sticking out past the tiles is visible.
+  switch (dir) {
+    case 'top':    el.style.transform = 'translateY(-55%)'; break;
+    case 'bottom': el.style.transform = 'translateY(55%)';  break;
+    case 'left':   el.style.transform = 'translateX(-55%)'; break;
+    case 'right':  el.style.transform = 'translateX(55%)';  break;
+  }
+}
+
+function clearEdgeOffset(el) {
+  el.style.transform = '';
+}
+
+function checkGobblersCollision() {
+  if (!state.gameActive || state.invincible) return;
+  for (const g of state.gobblers) {
+    if (g.hideState) continue; // hidden/peeking gobblers can't hurt you
+    if (g.col === state.chomper.col && g.row === state.chomper.row) {
+      state.lives--;
+      playWrong();
+      renderLives();
+      const phrases = GOBBLER_PHRASES_MAP[g.type] || GOBBLER_PHRASES_MAP.wanderer;
+      speak(randomPhrase(phrases));
+      // Move chomper to safe spot
+      state.chomper = { col: 2, row: 1 };
+      const ch = document.querySelector('.chomper-on-grid');
+      if (ch) {
+        ch.classList.add('wrong');
+        setTimeout(() => ch.classList.remove('wrong'), 400);
+        positionEntity(ch, 2, 1);
+      }
+      if (state.lives <= 0) {
+        gameOver();
+      }
+      return;
+    }
+  }
+}
+
+// =============================================
+// SAFE ZONES & COOKIES
+// =============================================
+function scheduleSafeZone() {
+  safeZoneTimeout = setTimeout(() => {
+    if (!state.gameActive || !state.gobblersEnabled) return;
+    const col = randInt(0, COLS - 1);
+    const row = randInt(0, ROWS - 1);
+    state.safeZones.push({ col, row });
+    const idx = row * COLS + col;
+    const cellEl = document.querySelectorAll('.cell')[idx];
+    if (cellEl) cellEl.classList.add('safe-zone');
+
+    // Remove after 8 seconds
+    setTimeout(() => {
+      state.safeZones = state.safeZones.filter(sz => sz.col !== col || sz.row !== row);
+      if (cellEl) cellEl.classList.remove('safe-zone');
+    }, 8000);
+
+    scheduleSafeZone();
+  }, randInt(10000, 20000));
+}
+
+function scheduleCookie() {
+  cookieTimeout = setTimeout(() => {
+    if (!state.gameActive) return;
+    const col = randInt(0, COLS - 1);
+    const row = randInt(0, ROWS - 1);
+    state.cookie = { col, row };
+    const idx = row * COLS + col;
+    const cellEl = document.querySelectorAll('.cell')[idx];
+    if (cellEl) {
+      const cookieEl = document.createElement('div');
+      cookieEl.className = 'cookie-icon';
+      cookieEl.id = 'cookieOnGrid';
+      cookieEl.textContent = '🍪';
+      cookieEl.style.position = 'absolute';
+      cookieEl.style.zIndex = '18';
+      cellEl.style.position = 'relative';
+      cellEl.appendChild(cookieEl);
+    }
+
+    // Remove after 10 seconds if not eaten
+    setTimeout(() => {
+      if (state.cookie && state.cookie.col === col && state.cookie.row === row) {
+        state.cookie = null;
+        const ce = document.getElementById('cookieOnGrid');
+        if (ce) ce.remove();
+      }
+    }, 10000);
+  }, randInt(15000, 25000));
+}
+
+function activateCookie() {
+  state.cookie = null;
+  const ce = document.getElementById('cookieOnGrid');
+  if (ce) ce.remove();
+  state.invincible = true;
+  playPowerup();
+  const ch = document.querySelector('.chomper-on-grid');
+  if (ch) ch.classList.add('invincible');
+
+  if (state.invincibleTimer) clearTimeout(state.invincibleTimer);
+  state.invincibleTimer = setTimeout(() => {
+    state.invincible = false;
+    if (ch) ch.classList.remove('invincible');
+  }, 5000);
+}
+
+// =============================================
+// CUTSCENES
+// =============================================
+function playCutscene() {
+  showScreen('cutsceneScreen');
+  const stage = document.getElementById('cutsceneStage');
+  const text = document.getElementById('cutsceneText');
+
+  const scenes = [
+    {
+      text: 'Gobbler tries to sneak up on Chomper...',
+      anim: () => {
+        stage.innerHTML = `
+          <div style="position:absolute;bottom:40px;left:20px;transition:all 2s;" id="csChomper">${chomperSVG(false)}</div>
+          <div style="position:absolute;bottom:40px;right:20px;transition:all 2s;" id="csGobbler">${gobblerSVG('hunter')}</div>
+        `;
+        setTimeout(() => {
+          const g = document.getElementById('csGobbler');
+          if (g) g.style.right = '45%';
+        }, 500);
+        setTimeout(() => {
+          const c = document.getElementById('csChomper');
+          if (c) { c.style.left = '-100px'; }
+          text.textContent = '...but Chomper is too fast! Gobbler trips!';
+        }, 2000);
+        setTimeout(() => {
+          const g = document.getElementById('csGobbler');
+          if (g) g.style.transform = 'rotate(180deg) translateY(-20px)';
+        }, 2500);
+      }
+    },
+    {
+      text: 'Gobbler sets a trap for Chomper...',
+      anim: () => {
+        stage.innerHTML = `
+          <div style="position:absolute;bottom:80px;left:50%;transform:translateX(-50%);">🪤</div>
+          <div style="position:absolute;bottom:40px;right:20px;transition:all 2s;" id="csGobbler2">${gobblerSVG('wanderer')}</div>
+          <div style="position:absolute;bottom:40px;left:20px;transition:all 2s;" id="csChomper2">${chomperSVG(false)}</div>
+        `;
+        setTimeout(() => {
+          const g = document.getElementById('csGobbler2');
+          if (g) { g.style.right = '45%'; g.style.bottom = '40px'; }
+          text.textContent = '...Gobbler walks into his own trap!';
+        }, 2000);
+        setTimeout(() => {
+          const g = document.getElementById('csGobbler2');
+          if (g) { g.style.bottom = '120px'; g.style.transform = 'rotate(720deg) scale(0.5)'; }
+        }, 2500);
+      }
+    },
+    {
+      text: 'Shy Gobbler tries to hide from Chomper...',
+      anim: () => {
+        stage.innerHTML = `
+          <div style="position:absolute;bottom:20px;left:40%;width:80px;height:60px;background:#8B4513;border-radius:5px;"></div>
+          <div style="position:absolute;bottom:40px;left:42%;transition:all 1.5s;" id="csGobbler3">${gobblerSVG('shyguy')}</div>
+          <div style="position:absolute;bottom:40px;right:30px;transition:all 2s;" id="csChomper3">${chomperSVG(false)}</div>
+        `;
+        setTimeout(() => {
+          text.textContent = '...but his nervous shaking gives him away!';
+          const g = document.getElementById('csGobbler3');
+          if (g) g.style.animation = 'gobblerShiver 0.1s ease-in-out infinite';
+        }, 1500);
+        setTimeout(() => {
+          const c = document.getElementById('csChomper3');
+          if (c) c.innerHTML = chomperSVG(true);
+          text.textContent = 'Chomper says BOO! 👻';
+        }, 3000);
+        setTimeout(() => {
+          const g = document.getElementById('csGobbler3');
+          if (g) { g.style.left = '-80px'; g.style.transform = 'scale(0.5)'; }
+        }, 3500);
+      }
+    }
+  ];
+
+  const scene = scenes[state.totalLevelsCompleted % scenes.length];
+  text.textContent = scene.text;
+  scene.anim();
+}
+
+function skipCutscene() {
+  showScreen('gameScreen');
+  loadLevel();
+}
+
+// =============================================
+// UI HELPERS
+// =============================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active'));
+}
+
+function toggleGobblers() {
+  state.gobblersEnabled = !state.gobblersEnabled;
+  const btn = document.getElementById('gobblersToggle');
+  btn.textContent = state.gobblersEnabled ? 'ON' : 'OFF';
+  btn.className = `toggle-btn ${state.gobblersEnabled ? 'on' : 'off'}`;
+}
+
+function toggleMusic() {
+  initAudio();
+  state.musicEnabled = !state.musicEnabled;
+  const btn = document.getElementById('musicToggle');
+  btn.textContent = state.musicEnabled ? 'ON' : 'OFF';
+  btn.className = `toggle-btn ${state.musicEnabled ? 'on' : 'off'}`;
+  if (!state.musicEnabled) stopBgMusic();
+}
+
+function toggleVoice() {
+  speechEnabled = !speechEnabled;
+  const btn = document.getElementById('voiceToggle');
+  btn.textContent = speechEnabled ? 'ON' : 'OFF';
+  btn.className = `toggle-btn ${speechEnabled ? 'on' : 'off'}`;
+  if (!speechEnabled && speechSynth) speechSynth.cancel();
+}
+
+function showHallOfFame() {
+  const list = document.getElementById('hofList');
+  if (hallOfFame.length === 0) {
+    list.innerHTML = '<li style="color:#888;">No scores yet! Play a game first.</li>';
+  } else {
+    list.innerHTML = hallOfFame.map((h, i) =>
+      `<li><span class="hof-rank">${i + 1}.</span> ${h.score} pts — Level ${h.level} (Grade ${h.grade}, ${h.category})</li>`
+    ).join('');
+  }
+  document.getElementById('hofModal').classList.add('active');
+}
+
+function closeHof() {
+  document.getElementById('hofModal').classList.remove('active');
+}
+
+function handleTouch(action) {
+  initAudio();
+  if (action === 'munch') munchCell();
+  else moveChomper(action);
+}
+
+// =============================================
+// INPUT HANDLING
+// =============================================
+document.addEventListener('keydown', (e) => {
+  if (state.screen === 'menu' || !state.gameActive) return;
+  initAudio();
+  switch (e.key) {
+    case 'ArrowUp': case 'w': case 'W': e.preventDefault(); moveChomper('up'); break;
+    case 'ArrowDown': case 's': case 'S': e.preventDefault(); moveChomper('down'); break;
+    case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); moveChomper('left'); break;
+    case 'ArrowRight': case 'd': case 'D': e.preventDefault(); moveChomper('right'); break;
+    case ' ': case 'Enter': e.preventDefault(); munchCell(); break;
+  }
+});
+
+// Swipe support
+let touchStartX = 0, touchStartY = 0;
+document.addEventListener('touchstart', (e) => {
+  // Only capture swipes on grid area
+  const gc = document.getElementById('gridContainer');
+  if (!gc || !gc.contains(e.target)) return;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', (e) => {
+  if (!state.gameActive) return;
+  const gc = document.getElementById('gridContainer');
+  if (!gc) return;
+
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  const minSwipe = 30;
+
+  if (Math.abs(dx) < minSwipe && Math.abs(dy) < minSwipe) return;
+  initAudio();
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    moveChomper(dx > 0 ? 'right' : 'left');
+  } else {
+    moveChomper(dy > 0 ? 'down' : 'up');
+  }
+}, { passive: true });
+
+// Resize handler
+window.addEventListener('resize', () => {
+  if (state.gameActive) {
+    requestAnimationFrame(() => updatePositions());
+  }
+});
+
+// =============================================
+// INIT
+// =============================================
+function init() {
+  // Create menu stars
+  const starsEl = document.getElementById('menuStars');
+  for (let i = 0; i < 50; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.animationDelay = Math.random() * 3 + 's';
+    star.style.width = (1 + Math.random() * 3) + 'px';
+    star.style.height = star.style.width;
+    starsEl.appendChild(star);
+  }
+
+  // Menu chomper
+  document.getElementById('menuChomper').innerHTML = chomperSVG(false, 'victory-chomper');
+
+  // Set screen state
+  state.screen = 'menu';
+
+  // Track active screen for keyboard
+  const observer = new MutationObserver(() => {
+    if (document.getElementById('gameScreen').classList.contains('active')) state.screen = 'game';
+    else if (document.getElementById('menuScreen').classList.contains('active')) state.screen = 'menu';
+  });
+  document.querySelectorAll('.screen').forEach(s => observer.observe(s, { attributes: true }));
+}
+
+init();
+</script>
+</body>
+</html>
