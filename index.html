@@ -92,6 +92,33 @@ body{font-family:'Nunito','Fredoka One',sans-serif;}
 .chomper-on-grid.idle .chomper-body-main{animation:idleBounce 1.5s ease-in-out infinite;}
 @keyframes idleBounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-3px);}}
 
+/* Chomper caught — looks up in surprise */
+.chomper-on-grid.caught .chomper-svg{animation:caughtSurprise 1.2s ease-in-out forwards;}
+@keyframes caughtSurprise{
+  0%{transform:scale(1) translateY(0);}
+  20%{transform:scale(1.1) translateY(2px);}
+  60%{transform:scale(0.9) translateY(0);}
+  80%{transform:scale(0.7) translateY(5px);}
+  100%{transform:scale(0) translateY(10px);opacity:0;}
+}
+
+/* Gobbler pounce — animate the wrapper div so it overrides type animations */
+.gobbler-on-grid.pouncing{animation:gobblerPounce 1.2s ease-in-out forwards !important;z-index:25 !important;}
+.gobbler-on-grid.pouncing .gobbler-svg{animation:none !important;}
+@keyframes gobblerPounce{
+  0%{transform:scale(1) translateY(0);}
+  20%{transform:scale(1.2) translateY(-50px);}
+  40%{transform:scale(1.4) translateY(-60px) rotate(10deg);}
+  55%{transform:scale(1.5) translateY(-55px) rotate(-5deg);}
+  75%{transform:scale(1.4) translateY(8px);}
+  90%{transform:scale(1.2) translateY(-3px);}
+  100%{transform:scale(1) translateY(0);}
+}
+
+/* Respawn blink — invincible after respawn */
+.chomper-on-grid.respawn-invincible .chomper-svg{animation:respawnBlink 0.4s ease-in-out infinite alternate;}
+@keyframes respawnBlink{0%{opacity:1;}100%{opacity:0.3;}}
+
 /* ========== GOBBLERS ========== */
 .gobbler-on-grid{position:absolute;z-index:15;pointer-events:none;transition:left 0.3s ease-in-out, top 0.3s ease-in-out, opacity 0.3s;}
 .gobbler-svg{width:clamp(40px,11vw,70px);height:clamp(40px,11vw,70px);}
@@ -1111,13 +1138,25 @@ function loadLevel() {
   state.prompt = levelData;
   state.levelStartTime = Date.now();
 
-  // Setup gobblers
+  // Setup gobblers — slow introduction across levels
+  // Level 1-3: 1 gobbler (wanderer only)
+  // Level 4-6: 2 gobblers (wanderer + shyguy)
+  // Level 7-9: 3 gobblers (wanderer + shyguy + hunter, but 1 hides in mid-levels)
+  // Level 10+: up to 4 gobblers, all active
   state.gobblers = [];
   if (state.gobblersEnabled) {
-    const numGobblers = Math.min(1 + Math.floor(state.level / 2), 4);
+    let numGobblers;
+    if (state.level <= 3) numGobblers = 1;
+    else if (state.level <= 6) numGobblers = 2;
+    else if (state.level <= 9) numGobblers = 3;
+    else numGobblers = Math.min(3 + Math.floor((state.level - 9) / 3), 4);
+
     const types = ['wanderer', 'shyguy', 'hunter'];
     for (let i = 0; i < numGobblers; i++) {
-      const type = state.level < 3 ? 'wanderer' : types[Math.min(i, types.length - 1)];
+      let type;
+      if (state.level <= 3) type = 'wanderer';
+      else if (state.level <= 6) type = types[Math.min(i, 1)]; // wanderer + shyguy
+      else type = types[Math.min(i, types.length - 1)];
       state.gobblers.push({
         type,
         col: i % 2 === 0 ? 0 : COLS - 1,
@@ -1342,6 +1381,39 @@ function moveGobblers() {
 
   const isSafe = (c, r) => state.safeZones.some(sz => sz.col === c && sz.row === r);
 
+  // ---- Active gobbler cap for mid-levels ----
+  // Levels 7-12: max 2 active at once. Level 13+: all can be active.
+  const maxActive = state.level >= 13 ? state.gobblers.length : 2;
+  const activeGobblers = state.gobblers.filter(g => !g.hideState);
+  if (activeGobblers.length > maxActive) {
+    // Force the last active gobbler (that isn't already hiding) to duck under
+    const toHide = activeGobblers[activeGobblers.length - 1];
+    const hIdx = state.gobblers.indexOf(toHide);
+    const onEdge = toHide.col === 0 || toHide.col === COLS - 1 || toHide.row === 0 || toHide.row === ROWS - 1;
+    if (onEdge) {
+      toHide.hideState = 'sinking';
+      toHide.hideEdge = edgeDirection(toHide.col, toHide.row);
+      const hEl = document.getElementById(`gobbler-${hIdx}`);
+      if (hEl) { hEl.classList.add('hiding'); applyEdgeOffset(hEl, toHide.hideEdge); }
+    } else {
+      // Not on edge yet — nudge toward nearest edge first
+      const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+      const best = dirs.reduce((a, b) => {
+        const ac = toHide.col + a[0], ar = toHide.row + a[1];
+        const bc = toHide.col + b[0], br = toHide.row + b[1];
+        const aEdge = (ac === 0 || ac === COLS-1 || ar === 0 || ar === ROWS-1) ? 0 : 1;
+        const bEdge = (bc === 0 || bc === COLS-1 || br === 0 || br === ROWS-1) ? 0 : 1;
+        return aEdge <= bEdge ? a : b;
+      });
+      const nc = toHide.col + best[0], nr = toHide.row + best[1];
+      if (nc >= 0 && nc < COLS && nr >= 0 && nr < ROWS) {
+        toHide.col = nc; toHide.row = nr;
+        const hEl = document.getElementById(`gobbler-${hIdx}`);
+        if (hEl) positionEntity(hEl, nc, nr);
+      }
+    }
+  }
+
   state.gobblers.forEach((g, i) => {
     const el = document.getElementById(`gobbler-${i}`);
 
@@ -1501,29 +1573,87 @@ function clearEdgeOffset(el) {
 }
 
 function checkGobblersCollision() {
-  if (!state.gameActive || state.invincible) return;
+  if (!state.gameActive || state.invincible || state.catchAnimating) return;
   for (const g of state.gobblers) {
-    if (g.hideState) continue; // hidden/peeking gobblers can't hurt you
+    if (g.hideState) continue;
     if (g.col === state.chomper.col && g.row === state.chomper.row) {
-      state.lives--;
-      playWrong();
-      renderLives();
-      const phrases = GOBBLER_PHRASES_MAP[g.type] || GOBBLER_PHRASES_MAP.wanderer;
-      speak(randomPhrase(phrases));
-      // Move chomper to safe spot
-      state.chomper = { col: 2, row: 1 };
-      const ch = document.querySelector('.chomper-on-grid');
-      if (ch) {
-        ch.classList.add('wrong');
-        setTimeout(() => ch.classList.remove('wrong'), 400);
-        positionEntity(ch, 2, 1);
-      }
-      if (state.lives <= 0) {
-        gameOver();
-      }
+      playCatchAnimation(g);
       return;
     }
   }
+}
+
+function playCatchAnimation(gobbler) {
+  state.catchAnimating = true;
+  state.gameActive = false; // pause game during animation
+  if (gobblersInterval) clearInterval(gobblersInterval);
+
+  const ch = document.querySelector('.chomper-on-grid');
+  const gIdx = state.gobblers.indexOf(gobbler);
+  const gEl = document.getElementById(`gobbler-${gIdx}`);
+
+  // Chomper looks up in surprise
+  if (ch) {
+    ch.classList.remove('idle');
+    ch.innerHTML = chomperSVG(false);
+    ch.classList.add('caught');
+  }
+
+  // Gobbler pounces
+  if (gEl) {
+    gEl.classList.add('pouncing');
+    gEl.style.zIndex = '25';
+  }
+
+  playWrong();
+  const phrases = GOBBLER_PHRASES_MAP[gobbler.type] || GOBBLER_PHRASES_MAP.wanderer;
+  speak(randomPhrase(phrases));
+
+  // After animation completes, resolve the catch
+  setTimeout(() => {
+    state.lives--;
+    renderLives();
+
+    // Reset gobbler
+    if (gEl) {
+      gEl.classList.remove('pouncing');
+      gEl.style.zIndex = '';
+    }
+
+    if (state.lives <= 0) {
+      state.catchAnimating = false;
+      gameOver();
+      return;
+    }
+
+    // Respawn Chomper in center with invincibility
+    state.chomper = { col: 2, row: 1 };
+    if (ch) {
+      ch.classList.remove('caught');
+      ch.innerHTML = chomperSVG(false);
+      ch.classList.add('respawn-invincible');
+      positionEntity(ch, 2, 1);
+    }
+
+    // Brief respawn invincibility
+    state.invincible = true;
+    state.gameActive = true;
+    state.catchAnimating = false;
+
+    // Restart gobbler movement
+    if (state.gobblersEnabled && state.gobblers.length > 0) {
+      gobblersInterval = setInterval(moveGobblers, 1200);
+    }
+
+    // End respawn invincibility after ~3 seconds
+    setTimeout(() => {
+      state.invincible = false;
+      if (ch) {
+        ch.classList.remove('respawn-invincible');
+        ch.classList.add('idle');
+      }
+    }, 3000);
+  }, 1300);
 }
 
 // =============================================
